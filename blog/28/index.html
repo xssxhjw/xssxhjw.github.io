@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN,en,default">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.14.0/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/pace-js@1.0.2/themes/blue/pace-theme-minimal.css">
+  <script src="//cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script>
+
+<script class="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"xssxhjw.github.io","root":"/","scheme":"Mist","version":"8.0.0-rc.5","exturl":false,"sidebar":{"position":"right","display":"always","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}};
+  </script>
+
+  <meta name="description" content="JAVA对象内存布局详解">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JAVA对象内存布局详解">
+<meta property="og:url" content="http://xssxhjw.github.io/blog/28/index.html">
+<meta property="og:site_name" content="笑书神侠">
+<meta property="og:description" content="JAVA对象内存布局详解">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.hujiwei.com/blog/20200507001645.jpg">
+<meta property="og:image" content="https://cdn.hujiwei.com/blog/20200507005515.jpg">
+<meta property="article:published_time" content="2020-05-07T06:39:30.000Z">
+<meta property="article:modified_time" content="2020-05-12T14:04:51.000Z">
+<meta property="article:author" content="笑书神侠">
+<meta property="article:tag" content="JAVA">
+<meta property="article:tag" content="对象">
+<meta property="article:tag" content="内存布局">
+<meta property="article:tag" content="jol">
+<meta property="article:tag" content="对象头">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.hujiwei.com/blog/20200507001645.jpg">
+
+
+<link rel="canonical" href="http://xssxhjw.github.io/blog/28/">
+
+
+<script class="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>JAVA对象内存布局详解 | 笑书神侠</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  body { margin-top: 2rem; }
+
+  .use-motion .menu-item,
+  .use-motion .sidebar,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header {
+    visibility: visible;
+  }
+
+  .use-motion .header,
+  .use-motion .site-brand-container .toggle,
+  .use-motion .footer { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle,
+  .use-motion .custom-logo-image {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line {
+    transform: scaleX(1);
+  }
+
+  .search-pop-overlay, .sidebar-nav { display: none; }
+  .sidebar-panel { display: block; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">笑书神侠</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">记录生活、工作点滴...</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <section class="post-toc-wrap sidebar-panel">
+          <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">测试环境</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9%E8%B1%A1%E5%A4%B4-object-header"><span class="nav-number">2.</span> <span class="nav-text">对象头(object header)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Mark-Word"><span class="nav-number">2.1.</span> <span class="nav-text">Mark Word</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Klass-Pointer"><span class="nav-number">2.2.</span> <span class="nav-text">Klass Pointer</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E4%BE%8B%E6%95%B0%E6%8D%AE"><span class="nav-number">3.</span> <span class="nav-text">实例数据</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9%E9%BD%90%E5%A1%AB%E5%85%85"><span class="nav-number">4.</span> <span class="nav-text">对齐填充</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-JOL-%E6%9F%A5%E7%9C%8B%E5%AF%B9%E8%B1%A1%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80"><span class="nav-number">5.</span> <span class="nav-text">使用 JOL 查看对象内存布局</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#JOL-%E4%BB%8B%E7%BB%8D"><span class="nav-number">5.1.</span> <span class="nav-text">JOL 介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JOL-Maven-%E5%9D%90%E6%A0%87"><span class="nav-number">5.2.</span> <span class="nav-text">JOL  Maven 坐标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B%E4%B8%80"><span class="nav-number">5.3.</span> <span class="nav-text">示例一</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B%E4%BA%8C"><span class="nav-number">5.4.</span> <span class="nav-text">示例二</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B%E4%B8%89"><span class="nav-number">5.5.</span> <span class="nav-text">示例三</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B%E5%9B%9B"><span class="nav-number">5.6.</span> <span class="nav-text">示例四</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">6.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+      </section>
+      <!--/noindex-->
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="笑书神侠"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">笑书神侠</p>
+  <div class="site-description" itemprop="description">笑书神侠的博客</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">46</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">76</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/xssxhjw" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xssxhjw" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://qx.hujiwei.com/" title="Riding → https:&#x2F;&#x2F;qx.hujiwei.com" rel="noopener" target="_blank"><i class="fa fa-bicycle fa-fw"></i>Riding</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://pm.hujiwei.com/" title="https:&#x2F;&#x2F;pm.hujiwei.com" rel="noopener" target="_blank">PhotoMap</a>
+        </li>
+    </ul>
+  </div>
+
+      </section>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+      
+
+      
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://xssxhjw.github.io/blog/28/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="笑书神侠">
+      <meta itemprop="description" content="笑书神侠的博客">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="笑书神侠">
+    </span>
+
+    
+    
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          JAVA对象内存布局详解
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-05-07 14:39:30" itemprop="dateCreated datePublished" datetime="2020-05-07T14:39:30+08:00">2020-05-07</time>
+    </span>
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2020-05-12 22:04:51" itemprop="dateModified" datetime="2020-05-12T22:04:51+08:00">2020-05-12</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Code/" itemprop="url" rel="index"><span itemprop="name">Code</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">JAVA对象内存布局详解</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h1 id="测试环境"><a href="#测试环境" class="headerlink" title="测试环境"></a>测试环境</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Darwin MacBook 19.4.0 Darwin Kernel Version 19.4.0</span><br><span class="line"></span><br><span class="line">java version &quot;1.8.0_92&quot;</span><br><span class="line"></span><br><span class="line">Java(TM) SE Runtime Environment (build 1.8.0_92-b14)</span><br><span class="line"></span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM (build 25.92-b14, mixed mode)</span><br></pre></td></tr></table></figure>
+
+<h1 id="对象头-object-header"><a href="#对象头-object-header" class="headerlink" title="对象头(object header)"></a>对象头(object header)</h1><blockquote>
+<p><strong>object header</strong></p>
+<p>Common structure at the beginning of every GC-managed heap object. (Every oop points to an object header.) Includes fundamental information about the heap object’s layout, type, GC state, synchronization state, and identity hash code. Consists of two <strong>words</strong>. <strong>In arrays it is immediately followed by a length field</strong>. Note that both Java objects and VM-internal objects have a common object header format.<br><a target="_blank" rel="noopener" href="https://openjdk.java.net/groups/hotspot/docs/HotSpotGlossary.html">https://openjdk.java.net/groups/hotspot/docs/HotSpotGlossary.html</a></p>
+</blockquote>
+<p>由上面的引用可知JAVA对象头包含 <strong>Mark Word</strong> 和 <strong>Klass Pointer</strong> 两部分，其中数组对象除了这两部分之外还包含数组的长度(int 型，占 4 字节)。</p>
+<h2 id="Mark-Word"><a href="#Mark-Word" class="headerlink" title="Mark Word"></a>Mark Word</h2><blockquote>
+<p><strong>mark word</strong></p>
+<p>The first <strong>word</strong> of every object header. Usually a set of bitfields including <strong>synchronization state</strong> and <strong>identity hash code</strong>. May also be a pointer (with characteristic low bit encoding) to synchronization related information. During GC, may contain GC state bits.</p>
+</blockquote>
+<blockquote>
+<p><img src="https://cdn.hujiwei.com/blog/20200507001645.jpg"><br><a target="_blank" rel="noopener" href="http://hg.openjdk.java.net/jdk8/jdk8/hotspot/file/87ee5ee27509/src/share/vm/oops/markOop.hpp">http://hg.openjdk.java.net/jdk8/jdk8/hotspot/file/87ee5ee27509/src/share/vm/oops/markOop.hpp</a></p>
+</blockquote>
+<p>根据官方的资料可知 <strong>mark word</strong> 在不同平台占用的空间大小是一个 <strong>word size</strong> (32/64bit)，存储了对象哈希吗、GC分代年龄</p>
+<p><img src="https://cdn.hujiwei.com/blog/20200507005515.jpg"></p>
+<p>▲对象不同状态下的 <strong>mark word</strong> 存储的数据</p>
+<h2 id="Klass-Pointer"><a href="#Klass-Pointer" class="headerlink" title="Klass Pointer"></a>Klass Pointer</h2><blockquote>
+<p><strong>klass pointer</strong></p>
+<p>The second <strong>word</strong> of every object header. Points to another object (a metaobject) which describes the layout and behavior of the original object. For Java objects, the “klass” contains a C++ style “vtable”.</p>
+</blockquote>
+<p><strong>klass pointer</strong> 是对象指向它的类元数据的指针，虚拟机通过它来确定这个对象是哪个类的实例。 在 32-bit JVM 上的大小是 4 bytes，在 64-bit JVM上可以是 4 bytes，也可以是 8 bytes，由 JVM 参数“是否压缩原始对象”决定，在HotSpot中是UseCompressedOops参数（jdk1.8 和jdk1.9默认是开启的）。</p>
+<h1 id="实例数据"><a href="#实例数据" class="headerlink" title="实例数据"></a>实例数据</h1><p>JAVA 对象中的各种实例数据所占字节大小</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Object Reference</td>
+<td>word size</td>
+</tr>
+<tr>
+<td>byte</td>
+<td>1 byte</td>
+</tr>
+<tr>
+<td>boolean</td>
+<td>1 byte</td>
+</tr>
+<tr>
+<td>char</td>
+<td>2 bytes</td>
+</tr>
+<tr>
+<td>short</td>
+<td>2 bytes</td>
+</tr>
+<tr>
+<td>int</td>
+<td>4 bytes</td>
+</tr>
+<tr>
+<td>float</td>
+<td>4 bytes</td>
+</tr>
+<tr>
+<td>double</td>
+<td>8 bytes</td>
+</tr>
+<tr>
+<td>long</td>
+<td>8 bytes</td>
+</tr>
+</tbody></table>
+<p>无从是从父类继承下来的字段还是定义在自身中的字段都会被记录。为了避免空间浪费，默认情况下，分配的优先依次顺序是：double / long &gt; int &gt; float &gt; char/ short &gt; byte / boolean &gt; oops。可以看出相同宽度的字段总是会被分配到一起，尽可能先分配占用空间大的类型。<strong>但是如果 CompactFields 参数为 true (默认为 true )，那么宽度较窄的字段也可能会插到前面</strong>，详情见示例三和四。</p>
+<p>如果对象中没有声明成员字段且也没有从父类继承字段，对象在堆内存中是不存在实例数据的。</p>
+<h1 id="对齐填充"><a href="#对齐填充" class="headerlink" title="对齐填充"></a>对齐填充</h1><p>JAVA 虚拟机要求对象起始地址必须是 8 字节的整数倍，也即是对象在在堆内存中所占字节大小(也就是上面的两项)必须是 8 字节的整数倍，如果不是 8 字节的倍数，差多少会字节则会被补齐填充。<br>如果上面的两项大小之和刚好是 8 的倍数则无需对齐填充。</p>
+<h1 id="使用-JOL-查看对象内存布局"><a href="#使用-JOL-查看对象内存布局" class="headerlink" title="使用 JOL 查看对象内存布局"></a>使用 JOL 查看对象内存布局</h1><h2 id="JOL-介绍"><a href="#JOL-介绍" class="headerlink" title="JOL 介绍"></a>JOL 介绍</h2><blockquote>
+<p><a target="_blank" rel="noopener" href="http://openjdk.java.net/projects/code-tools/jol/">JOL</a>  (Java Object Layout) is the tiny toolbox to analyze object layout schemes in JVMs. These tools are using Unsafe, JVMTI, and Serviceability Agent (SA) heavily to decoder the actual object layout, footprint, and references. This makes JOL much more accurate than other tools relying on heap dumps, specification assumptions, etc.</p>
+</blockquote>
+<h2 id="JOL-Maven-坐标"><a href="#JOL-Maven-坐标" class="headerlink" title="JOL  Maven 坐标"></a>JOL  Maven 坐标</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.openjdk.jol<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jol-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">version</span>&gt;</span>0.10<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="示例一"><a href="#示例一" class="headerlink" title="示例一"></a>示例一</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ObjLayoutDemo</span> </span>&#123;</span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"> Obj obj = <span class="keyword">new</span> Obj();</span><br><span class="line"> String printable = ClassLayout.parseClass(obj.getClass()).toPrintable();</span><br><span class="line"> System.out.println(printable);</span><br><span class="line">&#125;</span><br><span class="line"> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Obj</span></span>&#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//out 空对象 对象头占 12 字节(jdk1.8 默认开启了压缩指针参数)，还有 4 字节的对齐填充</span></span><br><span class="line"> OFFSET  SIZE   TYPE DESCRIPTION                               VALUE</span><br><span class="line">      <span class="number">0</span>    <span class="number">12</span>        (object header)                           N/A</span><br><span class="line">     <span class="number">12</span>     <span class="number">4</span>        (loss due to the next object alignment)</span><br><span class="line">Instance size: <span class="number">16</span> bytes</span><br><span class="line">Space losses: <span class="number">0</span> bytes internal + <span class="number">4</span> bytes external = <span class="number">4</span> bytes total</span><br></pre></td></tr></table></figure>
+
+<h2 id="示例二"><a href="#示例二" class="headerlink" title="示例二"></a>示例二</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ObjLayoutDemo</span> </span>&#123;</span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"> Obj[] objArr = <span class="keyword">new</span> Obj[]&#123;<span class="keyword">new</span> Obj()&#125;;</span><br><span class="line"> String printable = ClassLayout.parseClass(objArr.getClass()).toPrintable();</span><br><span class="line"> System.out.println(printable);</span><br><span class="line">&#125;</span><br><span class="line"> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Obj</span></span>&#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//out 数组对象的对象头多了 4 字节用来保存数组长度</span></span><br><span class="line"> OFFSET  SIZE                                       TYPE DESCRIPTION                               VALUE</span><br><span class="line">      <span class="number">0</span>    <span class="number">16</span>                                            (object header)                           N/A</span><br><span class="line">     <span class="number">16</span>     <span class="number">0</span>   com.hujiwei.obj.layout.ObjLayoutDemo$Obj ObjLayoutDemo$Obj;.&lt;elements&gt;             N/A</span><br><span class="line">Instance size: <span class="number">16</span> bytes</span><br><span class="line">Space losses: <span class="number">0</span> bytes internal + <span class="number">0</span> bytes external = <span class="number">0</span> bytes total</span><br></pre></td></tr></table></figure>
+
+<h2 id="示例三"><a href="#示例三" class="headerlink" title="示例三"></a>示例三</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ObjLayoutDemo</span> </span>&#123;</span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"> Obj obj = <span class="keyword">new</span> Obj();</span><br><span class="line"> String printable = ClassLayout.parseClass(obj.getClass()).toPrintable();</span><br><span class="line"> System.out.println(printable);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Obj</span> </span>&#123;</span><br><span class="line">	<span class="keyword">byte</span> a;</span><br><span class="line">	<span class="keyword">short</span> b;</span><br><span class="line">	<span class="keyword">boolean</span> c;</span><br><span class="line">	<span class="keyword">int</span> d;</span><br><span class="line">	<span class="keyword">double</span> e;</span><br><span class="line">	<span class="keyword">float</span> f;</span><br><span class="line">	<span class="keyword">long</span> l;</span><br><span class="line">	<span class="keyword">char</span> j;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//out 从输出结果看字段的分配顺序并不是上面的默认策略，而是 int 插入到 double前面了，这是因为默认开启了 -XX:+CompactFields 参数。 object header 12 字节后面会有 4 字节的填充，刚好 int 可以放的下，如果没有 int 则会由其他 &lt;= 4 字节的字段来填充。</span></span><br><span class="line"> OFFSET  SIZE      TYPE DESCRIPTION                               VALUE</span><br><span class="line">      <span class="number">0</span>    <span class="number">12</span>           (object header)                           N/A</span><br><span class="line">     <span class="number">12</span>     <span class="number">4</span>       <span class="keyword">int</span> Obj.d                                     N/A</span><br><span class="line">     <span class="number">16</span>     <span class="number">8</span>    <span class="keyword">double</span> Obj.e                                     N/A</span><br><span class="line">     <span class="number">24</span>     <span class="number">8</span>      <span class="keyword">long</span> Obj.l                                     N/A</span><br><span class="line">     <span class="number">32</span>     <span class="number">4</span>     <span class="keyword">float</span> Obj.f                                     N/A</span><br><span class="line">     <span class="number">36</span>     <span class="number">2</span>     <span class="keyword">short</span> Obj.b                                     N/A</span><br><span class="line">     <span class="number">38</span>     <span class="number">2</span>      <span class="keyword">char</span> Obj.j                                     N/A</span><br><span class="line">     <span class="number">40</span>     <span class="number">1</span>      <span class="keyword">byte</span> Obj.a                                     N/A</span><br><span class="line">     <span class="number">41</span>     <span class="number">1</span>   <span class="keyword">boolean</span> Obj.c                                     N/A</span><br><span class="line">     <span class="number">42</span>     <span class="number">6</span>           (loss due to the next object alignment)</span><br><span class="line">Instance size: <span class="number">48</span> bytes</span><br><span class="line">Space losses: <span class="number">0</span> bytes internal + <span class="number">6</span> bytes external = <span class="number">6</span> bytes total</span><br></pre></td></tr></table></figure>
+
+<h2 id="示例四"><a href="#示例四" class="headerlink" title="示例四"></a>示例四</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ObjLayoutDemo</span> </span>&#123;</span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"> Obj obj = <span class="keyword">new</span> Obj();</span><br><span class="line"> String printable = ClassLayout.parseClass(obj.getClass()).toPrintable();</span><br><span class="line"> System.out.println(printable);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Obj</span> </span>&#123;</span><br><span class="line">	<span class="keyword">byte</span> a;</span><br><span class="line">	<span class="keyword">short</span> b;</span><br><span class="line">	<span class="keyword">boolean</span> c;</span><br><span class="line">	<span class="keyword">int</span> d;</span><br><span class="line">	<span class="keyword">double</span> e;</span><br><span class="line">	<span class="keyword">float</span> f;</span><br><span class="line">	<span class="keyword">long</span> l;</span><br><span class="line">	<span class="keyword">char</span> j;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//out 关闭 -XX:-CompactFields 参数，就会按照默认的顺序来分配了，这样会在 object header 后面多出 4 字节的填充。</span></span><br><span class="line"> OFFSET  SIZE      TYPE DESCRIPTION                               VALUE</span><br><span class="line">      <span class="number">0</span>    <span class="number">12</span>           (object header)                           N/A</span><br><span class="line">     <span class="number">12</span>     <span class="number">4</span>           (alignment/padding gap)                  </span><br><span class="line">     <span class="number">16</span>     <span class="number">8</span>    <span class="keyword">double</span> Obj.e                                     N/A</span><br><span class="line">     <span class="number">24</span>     <span class="number">8</span>      <span class="keyword">long</span> Obj.l                                     N/A</span><br><span class="line">     <span class="number">32</span>     <span class="number">4</span>       <span class="keyword">int</span> Obj.d                                     N/A</span><br><span class="line">     <span class="number">36</span>     <span class="number">4</span>     <span class="keyword">float</span> Obj.f                                     N/A</span><br><span class="line">     <span class="number">40</span>     <span class="number">2</span>     <span class="keyword">short</span> Obj.b                                     N/A</span><br><span class="line">     <span class="number">42</span>     <span class="number">2</span>      <span class="keyword">char</span> Obj.j                                     N/A</span><br><span class="line">     <span class="number">44</span>     <span class="number">1</span>      <span class="keyword">byte</span> Obj.a                                     N/A</span><br><span class="line">     <span class="number">45</span>     <span class="number">1</span>   <span class="keyword">boolean</span> Obj.c                                     N/A</span><br><span class="line">     <span class="number">46</span>     <span class="number">2</span>           (loss due to the next object alignment)</span><br><span class="line">Instance size: <span class="number">48</span> bytes</span><br><span class="line">Space losses: <span class="number">4</span> bytes internal + <span class="number">2</span> bytes external = <span class="number">6</span> bytes total</span><br></pre></td></tr></table></figure>
+
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://openjdk.java.net/groups/hotspot/docs/HotSpotGlossary.html">https://openjdk.java.net/groups/hotspot/docs/HotSpotGlossary.html</a></li>
+<li><a target="_blank" rel="noopener" href="http://openjdk.java.net/projects/code-tools/jol/"> http://openjdk.java.net/projects/code-tools/jol/</a></li>
+<li><a target="_blank" rel="noopener" href="http://btoddb-java-sizing.blogspot.com/">http://btoddb-java-sizing.blogspot.com/</a></li>
+<li><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000012354736">https://segmentfault.com/a/1190000012354736</a></li>
+<li>《深入理解Java虚拟机》</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/JAVA/" rel="tag"><i class="fa fa-tag"></i> JAVA</a>
+              <a href="/tags/%E5%AF%B9%E8%B1%A1/" rel="tag"><i class="fa fa-tag"></i> 对象</a>
+              <a href="/tags/%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80/" rel="tag"><i class="fa fa-tag"></i> 内存布局</a>
+              <a href="/tags/jol/" rel="tag"><i class="fa fa-tag"></i> jol</a>
+              <a href="/tags/%E5%AF%B9%E8%B1%A1%E5%A4%B4/" rel="tag"><i class="fa fa-tag"></i> 对象头</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/blog/27/" rel="prev" title="南京两日游">
+                  <i class="fa fa-chevron-left"></i> 南京两日游
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/blog/29/" rel="next" title="中华字经注音版">
+                  中华字经注音版 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+  
+  
+  
+
+
+
+      
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      const activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      const commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      
+  <div class="languages">
+    <label class="lang-select-label">
+      <i class="fa fa-language"></i>
+      <span>简体中文</span>
+      <i class="fa fa-angle-up" aria-hidden="true"></i>
+    </label>
+    <select class="lang-select" data-canonical="">
+      
+        <option value="zh-CN" data-href="//blog/28/" selected="">
+          简体中文
+        </option>
+      
+        <option value="en" data-href="/en/blog/28/" selected="">
+          English
+        </option>
+      
+    </select>
+  </div>
+
+      
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑书神侠</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="//cdn.jsdelivr.net/npm/animejs@3.2.0/lib/anime.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  <script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
